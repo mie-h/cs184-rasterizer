@@ -8,7 +8,60 @@ namespace CGL {
 
   Color Texture::sample(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+      float level = get_level(sp); //6.3  6 7  (0.3* lvl6 color + 0.7* lvl 7)
+      if (level < 0) {
+          level = 0;
+      }
+      int nearest_level = (int) round(level);
+      int lower_level = (int) floor(level);
+      int upper_level = (int) ceil(level);
 
+      if (nearest_level >= mipmap.size()) {
+          nearest_level = mipmap.size()-1;
+      }
+      if (upper_level >= mipmap.size()) {
+          upper_level = mipmap.size() - 1;
+      }
+
+    if (sp.lsm == L_ZERO) {
+        if (sp.psm == P_NEAREST) {
+            return sample_nearest(sp.p_uv, 0);
+        }
+        else {
+            return sample_bilinear(sp.p_uv, 0);
+        }
+    }
+    else if (sp.lsm == L_NEAREST) {
+        //cout << level << " " <<nearest_level << endl;
+        if (sp.psm == P_NEAREST) {
+            return sample_nearest(sp.p_uv, nearest_level);
+        }
+        else {
+            return sample_bilinear(sp.p_uv, nearest_level);
+        }
+
+    }
+    else if (sp.lsm == L_LINEAR) {
+        float upper_diff = upper_level - level;
+        float lower_diff = level - lower_level;
+        if (sp.psm == P_NEAREST) {
+            if (upper_diff == lower_diff) {
+                return sample_nearest(sp.p_uv, upper_level);
+            }
+            else {
+                return upper_diff * sample_nearest(sp.p_uv, upper_level) + sample_nearest(sp.p_uv, lower_level) * lower_diff;
+            }
+         
+        }
+        else {
+            if (upper_diff == lower_diff) {
+                return sample_bilinear(sp.p_uv, upper_level);
+            }
+            else {
+                return upper_diff * sample_bilinear(sp.p_uv, upper_level) + sample_bilinear(sp.p_uv, lower_level) * lower_diff;
+            }
+        }
+    }
 
 // return magenta for invalid level
     return Color(1, 0, 1);
@@ -16,10 +69,25 @@ namespace CGL {
 
   float Texture::get_level(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+    Vector2D diff1 = sp.p_dx_uv - sp.p_uv;
+    Vector2D diff2 = sp.p_dy_uv - sp.p_uv;
+    diff1.x = diff1.x * this->width;
+    diff1.y = diff1.y * this->height;
+    diff2.x = diff2.x * this->width;
+    diff2.y = diff2.y * this->height;
 
+    float first = sqrt(pow(diff1.x, 2) + pow(diff1.y, 2));
+    float second = sqrt(pow(diff2.x, 2) + pow(diff2.y, 2));
 
-
-    return 0;
+    float level = log2(max(first, second));
+    if (level < 0) {
+        return 0;
+    }
+    else if (level >= mipmap.size()) {
+        return mipmap.size() - 1;
+    }
+    return level;
+    //return 0;
   }
 
   Color MipLevel::get_texel(int tx, int ty) {
@@ -30,22 +98,97 @@ namespace CGL {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
 
+    // find point that is closest to x and y passed in
+    float u = uv.x * (mip.width-1);
+    float v = uv.y * (mip.height-1);
+    if (level < 0) {
+        level = 0;
+    }
+    else if (level >= mipmap.size()) {
+        level = mipmap.size() - 1;
+    }
+    //float lvl_adjuster = pow(2, level);
+    float lvl_adjuster = 1;
+    float level_adj_u = u / lvl_adjuster;
+    float lvl_adj_v = v / lvl_adjuster;
 
 
+    // find closest 1
+    //cout << "width: " << mip.width << " hieght: " << mip.height << "\n";
+    int tx = (int) round(level_adj_u);
+    int ty = (int) round(lvl_adj_v);
+    if (tx >= width || tx < 0 || ty >= height || ty < 0) {
+        cout << "tx ty outside bounds\n";
+        if (tx < 0 || ty < 0) {
+            cout << "under 0\n";
+            return Color(1, 0, 1);
+        }
+        else if (tx >= width || ty >= height) {
+            cout << "tx ty too big\n";
+            return Color(1, 0, 1);
+        }
+        return Color(1, 0, 1);
+    }
+
+    // call get_texel to get the color that matches with the texel?
+
+    //cout << "got past mip\n";
+    return mip.get_texel(tx, ty);
 
     // return magenta for invalid level
-    return Color(1, 0, 1);
+    //commented out for task5
+    //return Color(1, 0, 1);
+  }
+
+  Color Texture::lerp(float x, Color v0, Color v1) {
+      return v0 + (x * v1) + ((-x) * v0);
   }
 
   Color Texture::sample_bilinear(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
 
+ /*   float u = uv.x * mip.width;
+    float v = uv.y * mip.height;*/
+
+    float u = uv.x * (mip.width - 1);
+    float v = uv.y * (mip.height - 1);
+    if (level < 0) {
+        level = 0;
+    }
+    else if (level >= mipmap.size()) {
+        level = mipmap.size() - 1;
+    }
+    //float lvl_adjuster = pow(2, level);
+    //float lvl_adjuster = 1;
+
+    /*float level_adj_u = u / lvl_adjuster;
+    float lvl_adj_v = v / lvl_adjuster;
+
+    int tx = (int)round(level_adj_u);
+    int ty = (int)round(lvl_adj_v);*/
 
 
+    float s = u - floor(u);
+    float t = v - floor(v);
+    Color u00 = mip.get_texel(floor(u), floor(v));
+    Color u01 = mip.get_texel(floor(u), ceil(v));
+    Color u10 = mip.get_texel(ceil(u), floor(v));
+    Color u11 = mip.get_texel(ceil(u), ceil(v));
+    Color u0 = lerp(s, u00, u10);
+    Color u1 = lerp(s, u01, u11);
+    Color f = lerp(t, u0, u1);
+    return f;
+
+    /////////end for task5
+
+    // call get_texel to get the color that matches with the texel?
+    //commented out for task5
+    //return mip.get_texel(tx, ty);
 
     // return magenta for invalid level
-    return Color(1, 0, 1);
+    //commented out for task5
+    //return Color(1, 0, 1);
   }
 
 
