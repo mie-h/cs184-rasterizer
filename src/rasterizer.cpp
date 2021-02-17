@@ -356,7 +356,7 @@ namespace CGL {
   //
   void RasterizerImp::resolve_to_framebuffer() {
     // TODO: Task 2: You will likely want to update this function for supersampling support
-      
+     
     //updated
     // assuming 4 sub pixels per pixel
     int sample_rate = this->sample_rate;
