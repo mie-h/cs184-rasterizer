@@ -182,7 +182,11 @@
             <p>I implemented it by using a mipmap class which contains multiple levels of the same image with different sizes. Then, depending on the how big the image is displayed on screen, the code samples texals from the appropriate image level in that vector. </p>
 
             <p> - You can now adjust your sampling technique by selecting pixel sampling, level sampling, or the number of samples per pixel. Describe the tradeoffs between speed, memory usage, and antialiasing power between the three various techniques.</p>
-            <p>----------------content here--------------</p>
+            <p>
+                More pixels sampled = slower processing, more memory usage, but better antialiasing<br>
+                Bilinear Pixel sampling = slower processing, comparable memory usage, better image quality<br>
+                Level sampling = A higher level means a lower resolution result, but higher speed. Using level sampling increases the processing speed, but increases memory usage.
+            </p>
 
             <p> - Using a png file you find yourself, show us four versions of the image, using the combinations of L_ZERO and P_NEAREST, L_ZERO and P_LINEAR, L_NEAREST and P_NEAREST, as well as L_NEAREST and P_LINEAR.</p>
             <div align="middle">
